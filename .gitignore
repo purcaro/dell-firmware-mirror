@@ -5,3 +5,12 @@ __pycache__/
 .eggs/
 build/
 dist/
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+mirror/
+scripts/config.local.sh

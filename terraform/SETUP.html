@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dell Firmware Mirror — Terraform Setup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --border:    #2a2d3e;
+      --accent:    #4f8ef7;
+      --accent2:   #7c3aed;
+      --success:   #22c55e;
+      --warn:      #f59e0b;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --code-bg:   #0d1117;
+      --code-text: #c9d1d9;
+      --step-size: 2.2rem;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    header .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: .25rem .65rem;
+      border-radius: 4px;
+      background: var(--accent2);
+      color: #fff;
+      margin-bottom: .75rem;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: .4rem;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    /* TOC */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .toc h2 {
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: .75rem;
+    }
+    .toc ol {
+      padding-left: 1.2rem;
+    }
+    .toc li { margin: .3rem 0; }
+    .toc a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: .95rem;
+    }
+    .toc a:hover { text-decoration: underline; }
+
+    /* Section */
+    section {
+      margin-bottom: 3rem;
+    }
+
+    /* Step header */
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: var(--step-size);
+      height: var(--step-size);
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-header h2 {
+      font-size: 1.35rem;
+      font-weight: 600;
+    }
+
+    p { margin-bottom: .85rem; }
+    p:last-child { margin-bottom: 0; }
+
+    /* Code blocks */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      margin: .85rem 0;
+      position: relative;
+    }
+    pre code {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+      font-size: .88rem;
+      color: var(--code-text);
+      background: none;
+    }
+    code {
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: .875em;
+      background: #1e2230;
+      color: #a5b4fc;
+      padding: .15em .45em;
+      border-radius: 4px;
+    }
+
+    /* Syntax colouring (manual classes) */
+    .kw  { color: #ff7b72; }   /* keyword */
+    .str { color: #a5d6ff; }   /* string  */
+    .cmt { color: #6e7681; font-style: italic; }  /* comment */
+    .var { color: #ffa657; }   /* variable */
+    .cmd { color: #79c0ff; }   /* cli command */
+    .ok  { color: #56d364; }   /* success output */
+
+    /* Callouts */
+    .callout {
+      display: flex;
+      gap: .85rem;
+      padding: .9rem 1.1rem;
+      border-radius: 8px;
+      margin: .85rem 0;
+      border-left: 4px solid;
+    }
+    .callout .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: .05rem; }
+    .callout p { margin: 0; font-size: .93rem; }
+    .callout.info  { background: #1e2a3a; border-color: var(--accent);  }
+    .callout.warn  { background: #281f0e; border-color: var(--warn);   }
+    .callout.good  { background: #0d2318; border-color: var(--success); }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+      margin: .85rem 0;
+    }
+    thead tr { border-bottom: 2px solid var(--border); }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    th { text-align: left; padding: .55rem .75rem; color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; }
+    td { padding: .55rem .75rem; vertical-align: top; }
+    td:first-child code { white-space: nowrap; }
+
+    /* Inline step divider */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2.5rem 0;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: .82rem;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="badge">Proxmox 9 · Ubuntu 24.04 · Terraform</div>
+    <h1>Dell Firmware Mirror<br>Terraform Setup Guide</h1>
+    <p>Provision a ready-to-run Ubuntu 24 VM on Proxmox using the <code>bpg/proxmox</code> provider.</p>
+  </header>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#prereqs">Prerequisites</a></li>
+      <li><a href="#proxmox-token">Create a Proxmox API Token</a></li>
+      <li><a href="#snippets">Enable Snippets on the Datastore</a></li>
+      <li><a href="#install-tf">Install Terraform</a></li>
+      <li><a href="#configure">Configure Variables</a></li>
+      <li><a href="#deploy">Init &amp; Apply</a></li>
+      <li><a href="#verify">Verify the VM</a></li>
+      <li><a href="#scripts">Remote Management Scripts</a></li>
+      <li><a href="#teardown">Teardown</a></li>
+    </ol>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="prereqs">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <h2>Prerequisites</h2>
+    </div>
+
+    <p>Before running Terraform you need the following in place:</p>
+
+    <table>
+      <thead>
+        <tr><th>Requirement</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Terraform ≥ 1.5</code></td><td>Covered in step 4</td></tr>
+        <tr><td>Proxmox VE 9 host</td><td>Reachable over HTTPS on port 8006</td></tr>
+        <tr><td>Proxmox API token</td><td>Covered in step 2</td></tr>
+        <tr><td>Snippets content enabled</td><td>Covered in step 3 — required for cloud-init</td></tr>
+        <tr><td>SSH public key</td><td>Will be injected into the VM via cloud-init</td></tr>
+        <tr><td>Internet access from Proxmox</td><td>Needed to download the Ubuntu cloud image</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout info">
+      <span class="icon">ℹ️</span>
+      <p>The Terraform scripts live in the <code>terraform/</code> directory of the <strong>dell-firmware-mirror</strong> repo. All commands below are run from that directory unless noted otherwise.</p>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="proxmox-token">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <h2>Create a Proxmox API Token</h2>
+    </div>
+
+    <p>SSH into your Proxmox host (or open a root shell in the Proxmox web console) and run the following commands to create a dedicated <code>terraform</code> user and an API token:</p>
+
+    <pre><code><span class="cmt"># Create a dedicated user for Terraform</span>
+<span class="cmd">pveum user add terraform@pam</span>
+
+<span class="cmt"># Create a role with the minimum required privileges</span>
+<span class="cmd">pveum role add TerraformRole -privs \
+  "Datastore.AllocateSpace Datastore.AllocateTemplate Datastore.Audit \
+   Pool.Allocate Sys.Audit Sys.Console Sys.Modify \
+   VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.Cloudinit \
+   VM.Config.CPU VM.Config.Disk VM.Config.HWType VM.Config.Memory \
+   VM.Config.Network VM.Config.Options VM.Migrate VM.Monitor VM.PowerMgmt"</span>
+
+<span class="cmt"># Assign the role to the user (/ = datacenter root)</span>
+<span class="cmd">pveum aclmod / -user terraform@pam -role TerraformRole</span>
+
+<span class="cmt"># Create an API token (--privsep=0 lets the token inherit the user's ACLs)</span>
+<span class="cmd">pveum user token add terraform@pam terraform --privsep=0</span></code></pre>
+
+    <p>The last command prints something like:</p>
+
+    <pre><code><span class="ok">┌──────────────┬──────────────────────────────────────┐
+│ key          │ value                                │
+╞══════════════╪══════════════════════════════════════╡
+│ full-tokenid │ terraform@pam!terraform              │
+│ value        │ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │
+└──────────────┴──────────────────────────────────────┘</span></code></pre>
+
+    <p>
+      Your <code>proxmox_api_token</code> variable value is the two parts joined with <code>=</code>:<br>
+      <code>terraform@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>
+    </p>
+
+    <div class="callout warn">
+      <span class="icon">⚠️</span>
+      <p>Copy the token secret now — Proxmox only displays it once. If you lose it, delete the token and create a new one.</p>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="snippets">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <h2>Enable Snippets on the Datastore</h2>
+    </div>
+
+    <p>The Terraform script uploads a cloud-init file as a Proxmox <em>snippet</em>. The target datastore must have the <strong>Snippets</strong> content type enabled:</p>
+
+    <ol style="padding-left:1.4rem; margin:.5rem 0;">
+      <li style="margin:.4rem 0">In the Proxmox web UI, go to <strong>Datacenter → Storage</strong></li>
+      <li style="margin:.4rem 0">Click on <strong>local</strong> (or whichever datastore matches <code>snippets_datastore</code> in your tfvars)</li>
+      <li style="margin:.4rem 0">Click <strong>Edit</strong></li>
+      <li style="margin:.4rem 0">In the <strong>Content</strong> field, add <strong>Snippets</strong></li>
+      <li style="margin:.4rem 0">Click <strong>OK</strong></li>
+    </ol>
+
+    <div class="callout info">
+      <span class="icon">ℹ️</span>
+      <p>You can also do this from the shell: <code>pvesm set local --content vztmpl,backup,iso,snippets</code></p>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="install-tf">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <h2>Install Terraform</h2>
+    </div>
+
+    <p>Run this on the machine where you'll execute Terraform (your workstation, a jump host, etc.).</p>
+
+    <p><strong>Ubuntu / Debian:</strong></p>
+    <pre><code><span class="cmd">wget -O - https://apt.releases.hashicorp.com/gpg | \
+  sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+  https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+  sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+sudo apt update && sudo apt install -y terraform</span></code></pre>
+
+    <p><strong>Verify:</strong></p>
+    <pre><code><span class="cmd">terraform version</span>
+<span class="ok">Terraform v1.9.x</span></code></pre>
+
+    <div class="callout info">
+      <span class="icon">ℹ️</span>
+      <p>On macOS use <code>brew install terraform</code>. On Windows use <code>winget install Hashicorp.Terraform</code>.</p>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="configure">
+    <div class="step-header">
+      <div class="step-num">5</div>
+      <h2>Configure Variables</h2>
+    </div>
+
+    <p>Copy the example vars file and edit it:</p>
+
+    <pre><code><span class="cmd">cd terraform/
+cp terraform.tfvars.example terraform.tfvars
+$EDITOR terraform.tfvars</span></code></pre>
+
+    <p>The table below describes every variable. The three marked <strong>required</strong> have no default and must be set.</p>
+
+    <table>
+      <thead>
+        <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>proxmox_endpoint</code></td><td><em>required</em></td><td>Proxmox HTTPS URL, e.g. <code>https://192.168.1.10:8006</code></td></tr>
+        <tr><td><code>proxmox_api_token</code></td><td><em>required</em></td><td>Token from step 2, e.g. <code>terraform@pam!terraform=xxx</code></td></tr>
+        <tr><td><code>ssh_public_key</code></td><td><em>required</em></td><td>Your SSH public key string (contents of <code>~/.ssh/id_ed25519.pub</code>)</td></tr>
+        <tr><td><code>proxmox_insecure</code></td><td><code>true</code></td><td>Skip TLS cert check — fine for self-signed Proxmox certs</td></tr>
+        <tr><td><code>proxmox_node</code></td><td><code>pve</code></td><td>Proxmox node name (shown in top-left of web UI)</td></tr>
+        <tr><td><code>iso_datastore</code></td><td><code>local</code></td><td>Where the Ubuntu cloud image is stored</td></tr>
+        <tr><td><code>snippets_datastore</code></td><td><code>local</code></td><td>Where the cloud-init snippet is stored</td></tr>
+        <tr><td><code>vm_datastore</code></td><td><code>local-lvm</code></td><td>Where VM disks live</td></tr>
+        <tr><td><code>vm_name</code></td><td><code>dell-firmware-mirror</code></td><td>VM display name in Proxmox</td></tr>
+        <tr><td><code>vm_id</code></td><td><code>200</code></td><td>Proxmox VM ID — must not already be in use</td></tr>
+        <tr><td><code>cpu_cores</code></td><td><code>2</code></td><td>Number of vCPUs</td></tr>
+        <tr><td><code>memory_mb</code></td><td><code>4096</code></td><td>RAM in MiB</td></tr>
+        <tr><td><code>os_disk_gb</code></td><td><code>20</code></td><td>Root OS disk size in GiB</td></tr>
+        <tr><td><code>mirror_disk_gb</code></td><td><code>200</code></td><td>Dedicated data disk for firmware files</td></tr>
+        <tr><td><code>network_bridge</code></td><td><code>vmbr0</code></td><td>Proxmox network bridge</td></tr>
+        <tr><td><code>vm_ipv4_cidr</code></td><td><em>empty</em></td><td>Static IP in CIDR notation; leave blank for DHCP</td></tr>
+        <tr><td><code>vm_gateway</code></td><td><em>empty</em></td><td>Default gateway when using a static IP</td></tr>
+        <tr><td><code>repo_url</code></td><td><code>…purcaro/dell-firmware-mirror.git</code></td><td>HTTPS repo URL cloned onto the VM</td></tr>
+      </tbody>
+    </table>
+
+    <p>A minimal <code>terraform.tfvars</code> looks like this:</p>
+
+    <pre><code><span class="var">proxmox_endpoint</span>  = <span class="str">"https://10.0.0.5:8006"</span>
+<span class="var">proxmox_api_token</span> = <span class="str">"terraform@pam!terraform=abc12345-..."</span>
+<span class="var">proxmox_node</span>      = <span class="str">"pve"</span>
+<span class="var">ssh_public_key</span>    = <span class="str">"ssh-ed25519 AAAAC3Nza... user@host"</span></code></pre>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="deploy">
+    <div class="step-header">
+      <div class="step-num">6</div>
+      <h2>Init &amp; Apply</h2>
+    </div>
+
+    <p><strong>Initialise</strong> — downloads the <code>bpg/proxmox</code> provider (~30 MB, one time only):</p>
+
+    <pre><code><span class="cmd">terraform init</span>
+
+<span class="ok">Initializing the backend...
+Initializing provider plugins...
+- Finding bpg/proxmox versions matching "~> 0.73"...
+- Installing bpg/proxmox v0.73.0...
+
+Terraform has been successfully initialized!</span></code></pre>
+
+    <p><strong>Plan</strong> — preview changes without making them:</p>
+
+    <pre><code><span class="cmd">terraform plan</span>
+
+<span class="ok">Plan: 3 to add, 0 to change, 0 to destroy.
+
+  + proxmox_virtual_environment_download_file.ubuntu_noble
+  + proxmox_virtual_environment_file.cloud_init
+  + proxmox_virtual_environment_vm.dell_firmware_mirror</span></code></pre>
+
+    <p><strong>Apply</strong> — create everything:</p>
+
+    <pre><code><span class="cmd">terraform apply</span></code></pre>
+
+    <p>Terraform shows the same plan and asks for confirmation:</p>
+
+    <pre><code>Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+
+  Enter a value: <span class="cmd">yes</span>
+
+<span class="ok">proxmox_virtual_environment_download_file.ubuntu_noble: Creating...
+proxmox_virtual_environment_file.cloud_init: Creating...
+proxmox_virtual_environment_vm.dell_firmware_mirror: Creating...
+proxmox_virtual_environment_vm.dell_firmware_mirror: Still creating... [10s elapsed]
+...
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+vm_id              = 200
+vm_ipv4_addresses  = [["10.0.0.50"]]</span></code></pre>
+
+    <div class="callout info">
+      <span class="icon">ℹ️</span>
+      <p>The Ubuntu cloud image download happens on the Proxmox host itself and only runs once — subsequent applies skip it because <code>overwrite = false</code>.</p>
+    </div>
+
+    <div class="callout warn">
+      <span class="icon">⏱️</span>
+      <p>After the VM starts, <strong>cloud-init takes ~2–3 minutes</strong> to finish installing Docker, cloning the repo, and starting services. The VM is reachable via SSH before cloud-init finishes, but services won't be up yet.</p>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="verify">
+    <div class="step-header">
+      <div class="step-num">7</div>
+      <h2>Verify the VM</h2>
+    </div>
+
+    <p>Use the IP printed in the Terraform output (or find it in the Proxmox web UI under the VM's Summary tab).</p>
+
+    <p><strong>SSH in:</strong></p>
+    <pre><code><span class="cmd">ssh ubuntu@&lt;VM_IP&gt;</span></code></pre>
+
+    <p><strong>Check cloud-init completed successfully:</strong></p>
+    <pre><code><span class="cmd">cloud-init status --wait</span>
+<span class="ok">status: done</span></code></pre>
+
+    <p><strong>Check the nginx container is running:</strong></p>
+    <pre><code><span class="cmd">docker ps</span>
+<span class="ok">CONTAINER ID   IMAGE                   COMMAND                  STATUS
+a3f1d2e8c901   dell-firmware-mirror    "/docker-entrypoint.…"   Up 2 minutes</span></code></pre>
+
+    <p><strong>Check the systemd services:</strong></p>
+    <pre><code><span class="cmd">systemctl status dell-firmware-mirror.service</span>
+<span class="ok">● dell-firmware-mirror.service - Dell Firmware Mirror (nginx via Docker)
+     Loaded: loaded (/etc/systemd/system/dell-firmware-mirror.service; enabled)
+     Active: active (running) since ...</span>
+
+<span class="cmd">systemctl status dellmirror-sync.timer</span>
+<span class="ok">● dellmirror-sync.timer - Daily Dell firmware mirror sync (02:00)
+     Active: active (waiting) ...</span></code></pre>
+
+    <p><strong>Tail the nginx access log:</strong></p>
+    <pre><code><span class="cmd">journalctl -u dell-firmware-mirror -f</span></code></pre>
+
+    <p><strong>Run the mirror sync manually (first-time population):</strong></p>
+    <pre><code><span class="cmd">cd /opt/dell-firmware-mirror
+./domirror.sh</span>
+<span class="ok">[Thread-1] Downloading BIOS_xxx_R740.exe ...
+[Thread-2] Downloading iDRAC_xxx.exe ...</span></code></pre>
+
+    <p><strong>Test that nginx serves files:</strong></p>
+    <pre><code><span class="cmd">curl -I http://&lt;VM_IP&gt;:8080/</span>
+<span class="ok">HTTP/1.1 200 OK
+Server: nginx/1.27.x</span></code></pre>
+
+    <div class="callout good">
+      <span class="icon">✅</span>
+      <p>Point your iDRAC / Lifecycle Controller clients at <code>http://&lt;VM_IP&gt;:8080</code> as the firmware repository URL.</p>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="scripts">
+    <div class="step-header">
+      <div class="step-num">8</div>
+      <h2>Remote Management Scripts</h2>
+    </div>
+
+    <p>The <code>scripts/</code> directory contains four scripts you can run from any machine with SSH access to the VM — no need to log in manually.</p>
+
+    <table>
+      <thead>
+        <tr><th>Script</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>watch-access.sh</code></td><td>Stream live nginx access log (HTTP requests as they arrive)</td></tr>
+        <tr><td><code>watch-errors.sh</code></td><td>Stream live nginx error and warning lines only</td></tr>
+        <tr><td><code>mirror-sync.sh</code></td><td>Run the firmware sync and stream its coloured output; accepts extra flags</td></tr>
+        <tr><td><code>vm-status.sh</code></td><td>One-shot health snapshot: Docker container, services, disk usage, last sync</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>One-time setup</strong> — tell the scripts where your VM is:</p>
+
+    <pre><code><span class="cmt"># Recommended: gitignored local file so your IP never ends up in git</span>
+<span class="cmd">echo 'VM_HOST="&lt;VM_IP&gt;"' &gt; scripts/config.local.sh</span>
+
+<span class="cmt"># Or edit directly</span>
+<span class="cmd">$EDITOR scripts/config.sh   # set VM_HOST (and optionally SSH_KEY)</span></code></pre>
+
+    <p>If your SSH key is not the default (<code>~/.ssh/id_rsa</code> / <code>id_ed25519</code>), also set:</p>
+    <pre><code><span class="cmd">echo 'SSH_KEY="~/.ssh/my_proxmox_key"' &gt;&gt; scripts/config.local.sh</span></code></pre>
+
+    <p><strong>Watch the nginx access log</strong> (Ctrl+C to stop):</p>
+    <pre><code><span class="cmd">./scripts/watch-access.sh</span>
+<span class="ok">Streaming nginx access log from 192.168.1.50 (Ctrl+C to stop)...
+─────────────────────────────────────────────────────────────────
+nginx  | 10.0.0.5 - - [29/May/2026:14:02:11 +0000] "GET /FOLDER01/firmware.exe HTTP/1.1" 200 45234182
+nginx  | 10.0.0.6 - - [29/May/2026:14:02:19 +0000] "GET /Catalog/Catalog.xml.gz HTTP/1.1" 200 981432</span></code></pre>
+
+    <p><strong>Watch the nginx error log:</strong></p>
+    <pre><code><span class="cmd">./scripts/watch-errors.sh</span>
+<span class="ok">Streaming nginx error log from 192.168.1.50 (Ctrl+C to stop)...
+─────────────────────────────────────────────────────────────────</span>
+<span class="cmt">(quiet when there are no errors)</span></code></pre>
+
+    <p><strong>Run a firmware mirror sync</strong> (streams live threaded output):</p>
+    <pre><code><span class="cmd">./scripts/mirror-sync.sh</span>
+<span class="ok">Starting Dell firmware mirror sync on 192.168.1.50...
+─────────────────────────────────────────────────────────────────
+[Thread-1] Checking BIOS_XXXXX_R740.exe ... MD5 OK, skipping
+[Thread-2] Downloading iDRAC_5.10.00_A00.exe (124 MB) ...</span></code></pre>
+
+    <p>Pass extra flags through to <code>dellmirror.py</code>:</p>
+    <pre><code><span class="cmd">./scripts/mirror-sync.sh --onlyfirmware</span>
+<span class="cmd">./scripts/mirror-sync.sh --server "R840,R940" --threads 16</span>
+<span class="cmd">./scripts/mirror-sync.sh --getcatalog</span></code></pre>
+
+    <p><strong>Check overall VM health:</strong></p>
+    <pre><code><span class="cmd">./scripts/vm-status.sh</span>
+<span class="ok">VM status: ubuntu@192.168.1.50
+═════════════════════════════════════════════════════════════════
+
+── Docker container ─────────────────────────────────────────────
+NAME      IMAGE                  STATUS          PORTS
+nginx-1   dell-firmware-mirror   Up 3 hours      0.0.0.0:8080->80/tcp
+
+── nginx service ────────────────────────────────────────────────
+● dell-firmware-mirror.service - Dell Firmware Mirror (nginx via Docker)
+     Active: active (running) since Wed 2026-05-29 02:00:12 UTC
+
+── sync timer ───────────────────────────────────────────────────
+NEXT                        LEFT     LAST                        PASSED  UNIT
+Thu 2026-05-30 02:04:37 UTC 11h left Wed 2026-05-29 02:00:12 UTC 1h ago  dellmirror-sync.timer
+
+── mirror disk usage ────────────────────────────────────────────
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vdb        197G   38G  149G  21% /opt/dell-firmware-mirror/mirror</span></code></pre>
+
+    <div class="callout good">
+      <span class="icon">✅</span>
+      <p>All scripts source <code>scripts/config.sh</code> (and <code>scripts/config.local.sh</code> if present). You only need to set <code>VM_HOST</code> once.</p>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="teardown">
+    <div class="step-header">
+      <div class="step-num">9</div>
+      <h2>Teardown</h2>
+    </div>
+
+    <p>To destroy the VM and all resources Terraform created:</p>
+
+    <pre><code><span class="cmd">terraform destroy</span></code></pre>
+
+    <div class="callout warn">
+      <span class="icon">⚠️</span>
+      <p><code>terraform destroy</code> permanently deletes both VM disks, including any firmware files on the mirror data disk. Back up <code>/opt/dell-firmware-mirror/mirror</code> first if you want to keep the downloaded files.</p>
+    </div>
+
+    <p>To destroy and immediately re-create (useful after config changes):</p>
+    <pre><code><span class="cmd">terraform destroy -auto-approve &amp;&amp; terraform apply -auto-approve</span></code></pre>
+  </section>
+
+  <footer>
+    dell-firmware-mirror · <a href="https://github.com/purcaro/dell-firmware-mirror" style="color:var(--accent); text-decoration:none;">github.com/purcaro/dell-firmware-mirror</a>
+  </footer>
+
+</div>
+</body>
+</html>

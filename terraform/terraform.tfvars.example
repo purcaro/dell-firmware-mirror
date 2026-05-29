@@ -1,0 +1,24 @@
+# Copy this file to terraform.tfvars and fill in your values.
+
+proxmox_endpoint   = "https://YOUR_PROXMOX_IP:8006"
+proxmox_api_token  = "terraform@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_node       = "pve"
+
+iso_datastore      = "local"        # must allow ISO content
+snippets_datastore = "local"        # must allow Snippets content (enable in Datacenter → Storage)
+vm_datastore       = "local-lvm"    # where VM disks live
+
+vm_name            = "dell-firmware-mirror"
+vm_id              = 200
+
+cpu_cores          = 2
+memory_mb          = 4096
+os_disk_gb         = 20
+mirror_disk_gb     = 200            # size your firmware library accordingly
+
+network_bridge     = "vmbr0"
+ssh_public_key     = "ssh-ed25519 AAAA... user@host"
+
+# Static IP — leave commented out to use DHCP
+# vm_ipv4_cidr = "192.168.1.50/24"
+# vm_gateway   = "192.168.1.1"

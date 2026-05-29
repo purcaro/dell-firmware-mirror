@@ -1,0 +1,97 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - git
+  - curl
+  - qemu-guest-agent
+  - python3-requests
+
+# Write systemd units before runcmd runs
+write_files:
+  - path: /etc/systemd/system/dell-firmware-mirror.service
+    content: |
+      [Unit]
+      Description=Dell Firmware Mirror (nginx via Docker)
+      Requires=docker.service
+      After=docker.service network-online.target
+
+      [Service]
+      Type=simple
+      WorkingDirectory=/opt/dell-firmware-mirror
+      ExecStart=/usr/bin/docker compose up
+      ExecStop=/usr/bin/docker compose down
+      Restart=always
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /etc/systemd/system/dellmirror-sync.service
+    content: |
+      [Unit]
+      Description=Dell Firmware Mirror Sync
+      After=network-online.target
+
+      [Service]
+      Type=oneshot
+      User=ubuntu
+      WorkingDirectory=/opt/dell-firmware-mirror
+      ExecStart=/opt/dell-firmware-mirror/domirror.sh
+      StandardOutput=journal
+      StandardError=journal
+
+  - path: /etc/systemd/system/dellmirror-sync.timer
+    content: |
+      [Unit]
+      Description=Daily Dell firmware mirror sync (02:00)
+
+      [Timer]
+      OnCalendar=*-*-* 02:00:00
+      RandomizedDelaySec=600
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+runcmd:
+  # Guest agent (enables Proxmox to read the VM IP)
+  - systemctl enable --now qemu-guest-agent
+
+  # Docker — official install script covers engine + compose plugin
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+  - systemctl enable --now docker
+
+  # Clone repo
+  - git clone ${repo_url} /opt/dell-firmware-mirror
+
+  # Fix ownership so ubuntu user can write mirror files
+  - chown -R ubuntu:ubuntu /opt/dell-firmware-mirror
+
+  # Make scripts executable
+  - chmod +x /opt/dell-firmware-mirror/domirror.sh /opt/dell-firmware-mirror/dellmirror.py
+
+  # Point domirror.sh at the repo-relative mirror dir (overrides hardcoded /home/dell/mirror)
+  - sed -i 's|/home/dell/mirror|/opt/dell-firmware-mirror/mirror|' /opt/dell-firmware-mirror/domirror.sh
+
+  # Format and mount the dedicated data disk (second virtio disk = /dev/vdb)
+  - |
+    if [ -b ${mirror_device} ]; then
+      mkfs.ext4 -F ${mirror_device}
+      mkdir -p /opt/dell-firmware-mirror/mirror
+      echo "${mirror_device} /opt/dell-firmware-mirror/mirror ext4 defaults,nofail 0 2" >> /etc/fstab
+      mount -a
+      chown ubuntu:ubuntu /opt/dell-firmware-mirror/mirror
+    fi
+
+  # Suppress SSH login banner so remote scripts get clean output
+  - touch /home/ubuntu/.hushlogin
+
+  # Enable services
+  - systemctl daemon-reload
+  - systemctl enable dell-firmware-mirror.service
+  - systemctl enable dellmirror-sync.timer
+  - systemctl start dellmirror-sync.timer
+  - systemctl start dell-firmware-mirror.service
