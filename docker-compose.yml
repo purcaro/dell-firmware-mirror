@@ -1,0 +1,8 @@
+services:
+  nginx:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./mirror:/mirror:ro
+    restart: unless-stopped
